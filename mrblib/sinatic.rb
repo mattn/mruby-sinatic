@@ -38,7 +38,10 @@ module Sinatic
       }
       #s.data << c
     }
-    UV::run()
+    #UV::run()
+    while true
+      UV::run_once()
+    end
   end
 end
 
@@ -50,3 +53,5 @@ module Kernel
     ::Sinatic.route 'POST', path, opts, &block
   end
 end
+
+# vim: set fdm=marker:
