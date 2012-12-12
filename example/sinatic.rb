@@ -19,5 +19,3 @@ post "/add" do |r, param|
 end
 
 Sinatic.run
-
-# vim: set fdm=marker:
