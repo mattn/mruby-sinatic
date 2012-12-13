@@ -1,7 +1,11 @@
 module Sinatic
+  @content_type = nil
   @routes = { 'GET' => [], 'POST' => [] }
   def self.route(method, path, opts, &block)
     @routes[method] << [path, opts, block]
+  end
+  def self.content_type(type)
+    @content_type = type
   end
   def self.do(r)
     @routes[r.method].each {|path|
@@ -11,10 +15,11 @@ module Sinatic
           tokens = x.split('=')
           param[tokens[0]] = HTTP::URL::decode(tokens[1])
         }
+        @content_type = 'text/html; charset=utf-8'
         body = path[2].call(r, param)
         return [
           "HTTP/1.0 200 OK",
-          "Content-Type: text/html; charset=utf-8",
+          "Content-Type: #{@content_type}",
           "Content-Length: #{body.size}",
           "", ""].join("\r\n") + body
       end
@@ -29,7 +34,7 @@ module Sinatic
         end
         return [
             "HTTP/1.0 200 OK",
-            "Content-Type: text/html; charset=utf-8",
+            "Content-Type: application/octet-stream; charset=utf-8",
             "Content-Length: #{body.size}",
             "", ""].join("\r\n") + body
       rescue RuntimeError
@@ -64,6 +69,9 @@ module Kernel
   end
   def post(path, opts={}, &block)
     ::Sinatic.route 'POST', path, opts, &block
+  end
+  def content_type(type)
+    ::Sinatic.content_type type
   end
 end
 
