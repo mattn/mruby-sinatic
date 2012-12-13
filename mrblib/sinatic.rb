@@ -13,18 +13,30 @@ module Sinatic
         }
         body = path[2].call(r, param)
         return [
-		  "HTTP/1.0 200 OK",
-		  "Content-Type: text/html; charset=utf-8",
-		  "Content-Length: #{body.size}",
-		  "", ""].join("\r\n") + body
+          "HTTP/1.0 200 OK",
+          "Content-Type: text/html; charset=utf-8",
+          "Content-Length: #{body.size}",
+          "", ""].join("\r\n") + body
       end
-	}
+    }
+    begin
+      f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY|UV::FS::O_BINARY, UV::FS::S_IREAD)
+      body = ''
+      while (read = f.read()).size > 0
+        body += read
+      end
+      return [
+          "HTTP/1.0 200 OK",
+          "Content-Type: text/html; charset=utf-8",
+          "Content-Length: #{body.size}",
+          "", ""].join("\r\n") + body
+    rescue RuntimeError
+    end
     return "HTTP/1.0 404 Not Found\r\nContent-Length: 10\r\n\r\nNot Found\n"
   end
   def self.run()
     s = UV::TCP.new()
     s.bind(UV::ip4_addr('127.0.0.1', 8888))
-    s.data = []
     s.listen(50) {|s, x|
       return if x != 0
       c = s.accept()
@@ -36,12 +48,8 @@ module Sinatic
           c.write(::Sinatic.do(r)) {|c, x| c.close() }
         }
       }
-      #s.data << c
     }
-    #UV::run()
-    while true
-      UV::run_once()
-    end
+    UV::run()
   end
 end
 
