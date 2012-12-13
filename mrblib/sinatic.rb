@@ -19,18 +19,20 @@ module Sinatic
           "", ""].join("\r\n") + body
       end
     }
-    begin
-      f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY|UV::FS::O_BINARY, UV::FS::S_IREAD)
-      body = ''
-      while (read = f.read()).size > 0
-        body += read
+    if r.method == 'GET'
+      begin
+        f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY|UV::FS::O_BINARY, UV::FS::S_IREAD)
+        body = ''
+        while (read = f.read()).size > 0
+          body += read
+        end
+        return [
+            "HTTP/1.0 200 OK",
+            "Content-Type: text/html; charset=utf-8",
+            "Content-Length: #{body.size}",
+            "", ""].join("\r\n") + body
+      rescue RuntimeError
       end
-      return [
-          "HTTP/1.0 200 OK",
-          "Content-Type: text/html; charset=utf-8",
-          "Content-Length: #{body.size}",
-          "", ""].join("\r\n") + body
-    rescue RuntimeError
     end
     return "HTTP/1.0 404 Not Found\r\nContent-Length: 10\r\n\r\nNot Found\n"
   end
