@@ -1,3 +1,5 @@
+#!mruby
+
 get "/" do
 '
 <script src="http://code.jquery.com/jquery-latest.js"></script>
