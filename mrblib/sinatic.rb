@@ -47,15 +47,15 @@ module Sinatic
   def self.run()
     s = UV::TCP.new()
     s.bind(UV::ip4_addr('127.0.0.1', 8888))
-    s.listen(50) {|s, x|
+    s.listen(50) {|x|
       return if x != 0
       c = s.accept()
-      c.read_start {|c, b|
+      c.read_start {|b|
         h = HTTP::Parser.new()
-        h.parse_request(b) {|h, r|
+        h.parse_request(b) {|r|
           i = b.index("\r\n\r\n") + 4
           r.body = b.slice(i, b.size - i)
-          c.write(::Sinatic.do(r)) {|c, x| c.close() }
+          c.write(::Sinatic.do(r)) {|x| c.close() }
         }
       }
     }
