@@ -1,4 +1,5 @@
 module Sinatic
+  @http_parser = nil
   @content_type = nil
   @routes = { 'GET' => [], 'POST' => [] }
   def self.route(method, path, opts, &block)
@@ -45,17 +46,22 @@ module Sinatic
     return "HTTP/1.0 404 Not Found\r\nContent-Length: 10\r\n\r\nNot Found\n"
   end
   def self.run()
+    h = HTTP::Parser.new()
     s = UV::TCP.new()
     s.bind(UV::ip4_addr('127.0.0.1', 8888))
-    s.listen(50) {|x|
+    s.listen(2000) {|x|
       return if x != 0
       c = s.accept()
       c.read_start {|b|
-        h = HTTP::Parser.new()
+        return unless b
         h.parse_request(b) {|r|
           i = b.index("\r\n\r\n") + 4
           r.body = b.slice(i, b.size - i)
-          c.write(::Sinatic.do(r)) {|x| c.close() }
+          c.write(::Sinatic.do(r)) {|x|
+            c.close() if c
+            c = nil
+            #GC.start
+          }
         }
       }
     }
