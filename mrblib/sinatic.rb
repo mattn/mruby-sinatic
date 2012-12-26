@@ -9,13 +9,13 @@ module Sinatic
     @content_type = type
   end
   def self.do(r)
-    @routes[r.method].each {|path|
+    @routes[r.method].each do |path|
       if path[0] == r.path
         param = {}
-        r.body.split('&').each {|x|
+        r.body.split('&').each do |x|
           tokens = x.split('=')
           param[tokens[0]] = HTTP::URL::decode(tokens[1])
-        }
+		end
         @content_type = 'text/html; charset=utf-8'
         body = path[2].call(r, param)
         return [
@@ -24,7 +24,7 @@ module Sinatic
           "Content-Length: #{body.size}",
           "", ""].join("\r\n") + body
       end
-    }
+	end
     if r.method == 'GET'
       f = nil
       begin
@@ -49,21 +49,29 @@ module Sinatic
     h = HTTP::Parser.new()
     s = UV::TCP.new()
     s.bind(UV::ip4_addr('127.0.0.1', 8888))
-    s.listen(2000) {|x|
+    s.listen(2000) do |x|
       return if x != 0
       c = s.accept()
-      c.read_start {|b|
+      c.read_start do |b|
         return unless b
-        h.parse_request(b) {|r|
+        h.parse_request(b) do |r|
           i = b.index("\r\n\r\n") + 4
           r.body = b.slice(i, b.size - i)
-          c.write(::Sinatic.do(r)) {|x|
+          c.write(::Sinatic.do(r)) do |x|
             c.close() if c
             c = nil
-          }
-        }
-      }
-    }
+          end
+          if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
+            c.write("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: #{body.size}\r\n\r\n#{body}") do |x|
+              c.close() if c
+              c = nil
+            end
+          else
+            c.write("HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: #{body.size}\r\n\r\n#{body}")
+          end
+        end
+      end
+    end
 
     t = UV::Timer.new
     t.start(3000, 3000) {|x|
