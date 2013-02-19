@@ -27,7 +27,7 @@ module Sinatic
     if r.method == 'GET'
       f = nil
       begin
-        f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY|UV::FS::O_BINARY, UV::FS::S_IREAD)
+        f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
         bb = ''
         while (read = f.read()).size > 0
           bb += read
