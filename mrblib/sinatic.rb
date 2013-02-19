@@ -14,7 +14,7 @@ module Sinatic
         r.body.split('&').each do |x|
           tokens = x.split('=', 2)
           param[tokens[0]] = HTTP::URL::decode(tokens[1])
-		end
+        end
         @content_type = 'text/html; charset=utf-8'
         bb = path[2].call(r, param)
         return [
@@ -23,18 +23,24 @@ module Sinatic
           "Content-Length: #{bb.size}",
           "", ""].join("\r\n") + bb
       end
-	end
+    end
     if r.method == 'GET'
       f = nil
       begin
-        f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
+        file = r.path + (r.path[-1] == '/' ? 'index.html' : '')
+        ext = file.split(".")[-1]
+        ctype = ['txt', 'html', 'css'].index(ext) ? "text/" + ext :
+                ['js'].index(ext) ? "text/javascript" :
+                'application/octet-stream'
+			'application'
+        f = UV::FS::open("static#{file}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
         bb = ''
-        while (read = f.read()).size > 0
+        while (read = f.read(4096, bb.size)).size > 0
           bb += read
         end
         return [
             "HTTP/1.0 200 OK",
-            "Content-Type: application/octet-stream; charset=utf-8",
+            "Content-Type: #{ctype}; charset=utf-8",
             "Content-Length: #{bb.size}",
             "", ""].join("\r\n") + bb
       rescue RuntimeError
