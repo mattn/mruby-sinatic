@@ -12,7 +12,7 @@ module Sinatic
       if path[0] == r.path
         param = {}
         r.body.split('&').each do |x|
-          tokens = x.split('=')
+          tokens = x.split('=', 2)
           param[tokens[0]] = HTTP::URL::decode(tokens[1])
 		end
         @content_type = 'text/html; charset=utf-8'
