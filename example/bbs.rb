@@ -8,7 +8,7 @@ get "/" do
 <script>
 $(function() {
   function reload() {
-    $.getJSON("/api", function(data) {
+    $.getJSON("api", function(data) {
       var ul = $("<ul/>").appendTo($("#list").empty());
       $.each(data, function() {
         $("<li/>").text(this[1]).appendTo(ul);
@@ -16,7 +16,7 @@ $(function() {
     });
   }
   $("#post").click(function() {
-    $.post("/api", {text: $("#text").val()}, function() {
+    $.post("api", {text: $("#text").val()}, function() {
       reload();
     });
   });
@@ -35,8 +35,7 @@ get "/api" do |r, param|
   db.execute('select * from bbs') do |row|
     ret += [row]
   end
-  # TODO: support JSON
-  ret.to_s
+  JSON.stringify ret
 end
 
 post "/api" do |r, param|
@@ -44,4 +43,4 @@ post "/api" do |r, param|
   "true"
 end
 
-Sinatic.run
+Sinatic.run :port => 5003

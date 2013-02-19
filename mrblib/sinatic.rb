@@ -1,5 +1,4 @@
 module Sinatic
-  @http_parser = nil
   @content_type = nil
   @routes = { 'GET' => [], 'POST' => [] }
   def self.route(method, path, opts, &block)
@@ -17,27 +16,27 @@ module Sinatic
           param[tokens[0]] = HTTP::URL::decode(tokens[1])
 		end
         @content_type = 'text/html; charset=utf-8'
-        body = path[2].call(r, param)
+        bb = path[2].call(r, param)
         return [
           "HTTP/1.0 200 OK",
           "Content-Type: #{@content_type}",
-          "Content-Length: #{body.size}",
-          "", ""].join("\r\n") + body
+          "Content-Length: #{bb.size}",
+          "", ""].join("\r\n") + bb
       end
 	end
     if r.method == 'GET'
       f = nil
       begin
         f = UV::FS::open("static#{r.path}", UV::FS::O_RDONLY|UV::FS::O_BINARY, UV::FS::S_IREAD)
-        body = ''
+        bb = ''
         while (read = f.read()).size > 0
-          body += read
+          bb += read
         end
         return [
             "HTTP/1.0 200 OK",
             "Content-Type: application/octet-stream; charset=utf-8",
-            "Content-Length: #{body.size}",
-            "", ""].join("\r\n") + body
+            "Content-Length: #{bb.size}",
+            "", ""].join("\r\n") + bb
       rescue RuntimeError
       ensure
         f.close if f
@@ -45,30 +44,27 @@ module Sinatic
     end
     return "HTTP/1.0 404 Not Found\r\nContent-Length: 10\r\n\r\nNot Found\n"
   end
-  def self.run()
-    h = HTTP::Parser.new()
+  def self.run(options = {})
     s = UV::TCP.new()
-    s.bind(UV::ip4_addr('127.0.0.1', 8888))
+    config = {:host => '127.0.0.1', :port => 8888}.merge(options)
+    s.bind(UV::ip4_addr(config[:host], config[:port]))
     s.listen(2000) do |x|
       return if x != 0
       c = s.accept()
       c.read_start do |b|
         return unless b
-        h.parse_request(b) do |r|
-          i = b.index("\r\n\r\n") + 4
-          r.body = b.slice(i, b.size - i)
-          c.write(::Sinatic.do(r)) do |x|
+        i = b.index("\r\n\r\n")
+        return if i < 0
+        r = HTTP::Parser.new.parse_request(b)
+        r.body = b.slice(i + 4, b.size - i - 4)
+        bb = ::Sinatic.do(r)
+        if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
+          c.write(bb) do |x|
             c.close() if c
             c = nil
           end
-          if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
-            c.write("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: #{body.size}\r\n\r\n#{body}") do |x|
-              c.close() if c
-              c = nil
-            end
-          else
-            c.write("HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: #{body.size}\r\n\r\n#{body}")
-          end
+        else
+          c.write(bb)
         end
       end
     end
