@@ -20,7 +20,10 @@ module Sinatic
         end
       end
       @content_type = 'text/html; charset=utf-8'
-      bb = route[0][2].call(r, param).to_s
+      bb = route[0][2].call(r, param)
+      if bb.class.to_s == 'Array'
+        bb = bb[0]
+      end
       return [
         "HTTP/1.0 200 OK",
         "Content-Type: #{@content_type}",
