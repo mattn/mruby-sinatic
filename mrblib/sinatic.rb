@@ -31,8 +31,7 @@ module Sinatic
         ext = file.split(".")[-1]
         ctype = ['txt', 'html', 'css'].index(ext) ? "text/" + ext :
                 ['js'].index(ext) ? "text/javascript" :
-                'application/octet-stream'
-			'application'
+                 'application/octet-stream'
         f = UV::FS::open("static#{file}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
         bb = ''
         while (read = f.read(4096, bb.size)).size > 0
