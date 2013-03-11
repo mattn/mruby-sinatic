@@ -8,21 +8,24 @@ module Sinatic
     @content_type = type
   end
   def self.do(r)
-    @routes[r.method].each do |path|
-      if path[0] == r.path
-        param = {}
+    route = @routes[r.method].select {|path| path[0] == r.path}
+    if route.size > 0
+      param = {}
+      if r.headers['Content-Type'] == 'application/x-www-form-urlencoded'
         r.body.split('&').each do |x|
           tokens = x.split('=', 2)
-          param[tokens[0]] = HTTP::URL::decode(tokens[1])
+          if tokens && tokens.size == 2
+            param[tokens[0]] = HTTP::URL::decode(tokens[1])
+          end
         end
-        @content_type = 'text/html; charset=utf-8'
-        bb = path[2].call(r, param)
-        return [
-          "HTTP/1.0 200 OK",
-          "Content-Type: #{@content_type}",
-          "Content-Length: #{bb.size}",
-          "", ""].join("\r\n") + bb
       end
+      @content_type = 'text/html; charset=utf-8'
+      bb = route[0][2].call(r, param).to_s
+      return [
+        "HTTP/1.0 200 OK",
+        "Content-Type: #{@content_type}",
+        "Content-Length: #{bb.size}",
+        "", ""].join("\r\n") + bb
     end
     if r.method == 'GET'
       f = nil
