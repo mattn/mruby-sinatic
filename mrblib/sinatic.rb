@@ -83,7 +83,7 @@ module Sinatic
             c.write(bb)
           end
         rescue
-          return "HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n"
+          c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n")
         end
       end
     end
