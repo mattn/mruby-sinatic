@@ -1,11 +1,15 @@
 module Sinatic
   @content_type = nil
+  @options = {:host => '127.0.0.1', :port => 8888}
   @routes = { 'GET' => [], 'POST' => [] }
   def self.route(method, path, opts, &block)
     @routes[method] << [path, opts, block]
   end
   def self.content_type(type)
     @content_type = type
+  end
+  def self.set(key, value)
+    @options[key] = value
   end
   def self.do(r)
     route = @routes[r.method].select {|path| path[0] == r.path}
@@ -57,7 +61,7 @@ module Sinatic
   end
   def self.run(options = {})
     s = UV::TCP.new()
-    config = {:host => '127.0.0.1', :port => 8888}.merge(options)
+    config = {:host => @options[:host], :port => @options[:port].to_i}.merge(options)
     s.bind(UV::ip4_addr(config[:host], config[:port]))
     s.listen(2000) do |x|
       return if x != 0
@@ -78,9 +82,9 @@ module Sinatic
           else
             c.write(bb)
           end
+        rescue
+          return "HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n"
         end
-      rescue
-        return "HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n"
       end
     end
 
@@ -103,6 +107,9 @@ module Kernel
   end
   def content_type(type)
     ::Sinatic.content_type type
+  end
+  def set(key, value)
+    ::Sinatic.set key, type
   end
 end
 
