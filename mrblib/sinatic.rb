@@ -34,7 +34,7 @@ module Sinatic
         "Content-Length: #{bb.size}",
         "", ""].join("\r\n") + bb
     end
-    if r.method == 'GET'
+    if r.method == 'GET' && r.path
       f = nil
       begin
         file = r.path + (r.path[-1] == '/' ? 'index.html' : '')
@@ -66,25 +66,33 @@ module Sinatic
     s.listen(2000) do |x|
       return if x != 0
       c = s.accept()
+	  c.data = ''
       c.read_start do |b|
         begin
           raise RuntimeError unless b
-          i = b.index("\r\n\r\n")
+          c.data += b
+          i = c.data.index("\r\n\r\n")
           if i != nil && i >= 0
-            r = HTTP::Parser.new.parse_request(b)
-            r.body = b.slice(i + 4, b.size - i - 4)
-            bb = ::Sinatic.do(r)
-            if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
-              c.write(bb) do |x|
-                c.close() if c
-                c = nil
+            r = HTTP::Parser.new.parse_request(c.data)
+            r.body = c.data.slice(i + 4, c.data.size - i - 4)
+            if !r.headers.has_key?('Content-Length') || r.headers['Content-Length'].to_i == r.body.size
+              bb = ::Sinatic.do(r)
+              if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
+                c.write(bb) do |x|
+                  c.close() if c
+                  c = nil
+                end
+              else
+                c.write(bb)
               end
-            else
-              c.write(bb)
             end
           end
         rescue
-          c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n")
+          puts $@.to_s
+          c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n") do |x|
+            c.close() if c
+            c = nil
+          end
         end
       end
     end
