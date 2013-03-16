@@ -77,13 +77,14 @@ module Sinatic
             r.body = c.data.slice(i + 4, c.data.size - i - 4)
             if !r.headers.has_key?('Content-Length') || r.headers['Content-Length'].to_i == r.body.size
               bb = ::Sinatic.do(r)
-              if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
+              if !r.headers.has_key?('Connection') || r.headers['Connection'].upcase != 'KEEP-ALIVE'
                 c.write(bb) do |x|
                   c.close() if c
                   c = nil
                 end
               else
                 c.write(bb)
+                c.data = ''
               end
             end
           end
