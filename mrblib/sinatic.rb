@@ -67,20 +67,21 @@ module Sinatic
       return if x != 0
       c = s.accept()
       c.read_start do |b|
-        return unless b
-        i = b.index("\r\n\r\n")
-        return if i < 0
         begin
-          r = HTTP::Parser.new.parse_request(b)
-          r.body = b.slice(i + 4, b.size - i - 4)
-          bb = ::Sinatic.do(r)
-          if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
-            c.write(bb) do |x|
-              c.close() if c
-              c = nil
+          raise RuntimeError unless b
+          i = b.index("\r\n\r\n")
+          if i != nil && i >= 0
+            r = HTTP::Parser.new.parse_request(b)
+            r.body = b.slice(i + 4, b.size - i - 4)
+            bb = ::Sinatic.do(r)
+            if !r.headers.has_key?('Connection') || r.headers['Connection'] != 'Keep-Alive'
+              c.write(bb) do |x|
+                c.close() if c
+                c = nil
+              end
+            else
+              c.write(bb)
             end
-          else
-            c.write(bb)
           end
         rescue
           c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n")
