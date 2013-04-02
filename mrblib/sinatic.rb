@@ -2,6 +2,7 @@ module Sinatic
   @content_type = nil
   @options = {:host => '127.0.0.1', :port => 8888}
   @routes = { 'GET' => [], 'POST' => [] }
+  @shutdown = false
   def self.route(method, path, opts, &block)
     @routes[method] << [path, opts, block]
   end
@@ -59,14 +60,24 @@ module Sinatic
     end
     return "HTTP/1.0 404 Not Found\r\nContent-Length: 10\r\n\r\nNot Found\n"
   end
+  def self.shutdown?
+    @shutdown
+  end
+  def self.shutdown
+    @shutdown = true
+  end
   def self.run(options = {})
-    s = UV::TCP.new()
+    s = UV::TCP.new
     config = {:host => @options[:host], :port => @options[:port].to_i}.merge(options)
     s.bind(UV::ip4_addr(config[:host], config[:port]))
     s.listen(2000) do |x|
-      return if x != 0
-      c = s.accept()
-	  c.data = ''
+      return if x != 0 or s == nil
+      begin
+        c = s.accept
+        c.data = ''
+      rescue
+        return
+      end
       c.read_start do |b|
         begin
           raise RuntimeError unless b
@@ -79,7 +90,7 @@ module Sinatic
               bb = ::Sinatic.do(r)
               if !r.headers.has_key?('Connection') || r.headers['Connection'].upcase != 'KEEP-ALIVE'
                 c.write(bb) do |x|
-                  c.close() if c
+                  c.close if c
                   c = nil
                 end
               else
@@ -89,9 +100,8 @@ module Sinatic
             end
           end
         rescue
-          puts $@.to_s
           c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n") do |x|
-            c.close() if c
+            c.close if c
             c = nil
           end
         end
@@ -99,12 +109,18 @@ module Sinatic
     end
 
     t = UV::Timer.new
-    t.start(3000, 3000) {|x|
-      UV::gc()
-      GC.start
-    }
+    t.data = s
+    t.start(3000, 3000) do |x|
+      if Sinatic.shutdown?
+        t.data.close
+        t.data = nil
+        t.close
+        t = nil
+      end
+      UV::gc
+    end
 
-    UV::run()
+    UV::run
   end
 end
 
