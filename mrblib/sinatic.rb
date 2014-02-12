@@ -43,7 +43,7 @@ module Sinatic
         ctype = ['txt', 'html', 'css'].index(ext) ? "text/" + ext :
                 ['js'].index(ext) ? "text/javascript" :
                  'application/octet-stream'
-        f = UV::FS::open("static#{file}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
+        f = UV::FS::open("public#{file}", UV::FS::O_RDONLY, UV::FS::S_IREAD)
         bb = ''
         while (read = f.read(4096, bb.size)).size > 0
           bb += read
