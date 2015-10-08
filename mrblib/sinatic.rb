@@ -135,7 +135,7 @@ module Kernel
     ::Sinatic.content_type type
   end
   def set(key, value)
-    ::Sinatic.set key, type
+    ::Sinatic.set key, value
   end
 end
 
