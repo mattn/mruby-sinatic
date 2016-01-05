@@ -101,7 +101,7 @@ module Sinatic
           end
         rescue
           c.write("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 22\r\n\r\nInternal Server Error\n") do |x|
-            c.close if c
+            c.close if c && !c.closing?
             c = nil
           end
         end
